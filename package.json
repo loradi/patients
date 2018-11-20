@@ -1,0 +1,16 @@
+{
+    "name": "Patients",
+    "version": "1.0.0",
+    "description": "Patients API",
+    "dependencies": {
+        "restify": "4.1.1",
+		"save": "2.3.0"
+
+    },
+    "author": "Diego Lopez",
+	"private": true,
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js"
+	}
+}
