@@ -1,129 +1,129 @@
-var SERVER_NAME = 'user-api'
-var PORT = process.env.PORT;
+const mysql = require('mysql');
+const express = require('express');
+var app = express();
+const bodyparser = require('body-parser');
+
+app.use(bodyparser.json());
+
+var mysqlConnection = mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'root',
+    password: '12345678',
+    database: 'patientDB',
+    multipleStatements: true
+});
+console.log(' /patients');
+console.log(' /patients/:id');  
+
+mysqlConnection.connect((err) => {
+    if (!err)
+        console.log('DB connection succeded.');
+    else
+        console.log('DB connection failed \n Error : ' + JSON.stringify(err, undefined, 2));
+});
+
+app.listen(3000, () => console.log('Express server is runnig at port no : 3000'));
 
 
-var restify = require('restify')
+//Get all patients
+app.get('/patients', (req, res) => {
+    mysqlConnection.query('SELECT idpatients, firstName, lastName, phoneNumber, address, dateBirthDay, department, doctorName FROM patients', (err, rows, fields) => {
+        if (!err) {
+            var result = JSON.parse('{"result" : "' + rows +' "}')
+            res.send(rows);
+        }
+            
+        else
+            console.log(err);
+    })
+});
 
-  // Get a persistence engine for the patients
-  , patientsSave = require('save')('patients')
+//Get all records
+app.get('/patients/records', (req, res) => {
+    mysqlConnection.query('SELECT idpatients, recordPatient FROM patients', (err, rows, fields) => {
+        if (!err)
+            res.send(rows);
+        else
+            console.log(err);
+    })
+});
 
-  // Create the restify server
-  , server = restify.createServer({ name: SERVER_NAME})
+//Get an records by Id patients
+app.get('/patients/:id/records', (req, res) => {
+    mysqlConnection.query('SELECT idpatients, recordPatient FROM patients WHERE idpatients = ?', [req.params.id], (err, rows, fields) => {
+        if (!err)
+            res.send(rows);
+        else
+            console.log(err);
+    })
+});
 
-  server.listen(PORT, function () {
-  console.log('Server %s listening at %s', server.name, server.url)
-  console.log('Resources:')
-  console.log(' /patients')
-  console.log(' /patients/:id')  
-})
+//Get an patients by Id patients
+app.get('/patients/:id', (req, res) => {
+    mysqlConnection.query('SELECT idpatients, firstName, lastName, phoneNumber, address, dateBirthDay, department, doctorName FROM patients WHERE idpatients = ?', [req.params.id], (err, rows, fields) => {
+        if (!err)
+            res.send(rows);
+        else
+            console.log(err);
+    })
+});
 
-server
-  // Allow the use of POST
-  .use(restify.fullResponse())
+//Delete an patients by Id
+app.delete('/patients/:id', (req, res) => {
+    mysqlConnection.query('DELETE FROM patients WHERE idpatients = ?', [req.params.id], (err, rows, fields) => {
+        if (!err)
+            res.send('Deleted patient by ID successfully.');
+        else
+            console.log(err);
+    })
+});
+//Delete all patients
+app.delete('/patients', (req, res) => {
+    mysqlConnection.query('DELETE FROM patients', (err, rows, fields) => {
+        if (!err)
+            res.send('Deleted all patients successfully.');
+        else
+            console.log(err);
+    })
+});
 
-  // Maps req.body to req.params so there is no switching between them
-  .use(restify.bodyParser())
-
-// Get all patients in the system
-server.get('/patients', function (req, res, next) {
-
-  // Find every entity within the given collection
-  patientsSave.find({}, function (error, patients) {
-
-    // Return all of the patients in the system
-    res.send(patients)
-  })
-})
-
-// Get a single user by their user id
-server.get('/patients/:id', function (req, res, next) {
-
-  // Find a single user by their id within save
-  patientsSave.findOne({ _id: req.params.id }, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
-
-    if (user) {
-      // Send the user if no issues
-      res.send(user)
-    } else {
-      // Send 404 header if the user doesn't exist
-      res.send(404)
-    }
-  })
-})
-
-// Create a new user
-server.post('/patients', function (req, res, next) {
-
-  // Make sure name is defined
-  if (req.params.name === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new restify.InvalidArgumentError('name must be supplied'))
-  }
-  if (req.params.age === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new restify.InvalidArgumentError('age must be supplied'))
-  }
-  var newUser = {
-		name: req.params.name, 
-		age: req.params.age
-	}
-
-  // Create the user using the persistence engine
-  patientsSave.create( newUser, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
-
-    // Send the user if no issues
-    res.send(201, user)
-  })
-})
-
-// Update a user by their id
-server.put('/patients/:id', function (req, res, next) {
-
-  // Make sure name is defined
-  if (req.params.name === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new restify.InvalidArgumentError('name must be supplied'))
-  }
-  if (req.params.age === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new restify.InvalidArgumentError('age must be supplied'))
-  }
-  
-  var newUser = {
-		_id: req.params.id,
-		name: req.params.name, 
-		age: req.params.age
-	}
-  
-  // Update the user with the persistence engine
-  patientsSave.update(newUser, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
-
-    // Send a 200 OK response
-    res.send(200)
-  })
-})
-
-// Delete user with the given id
-server.del('/patients/:id', function (req, res, next) {
-
-  // Delete the user with the persistence engine
-  patientsSave.delete(req.params.id, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
-
-    // Send a 200 OK response
-    res.send()
-  })
-})
+//Insert an patients
+app.post('/patients', (req, res) => {
+    let pat = req.body;
+    var sql ="INSERT INTO patients (firstName, lastName, phoneNumber, address, dateBirthDay, department, doctorName) VALUES('"+pat.firstName+"','"+pat.lastName+"',"+pat.phoneNumber+",'"+pat.address+"','"+pat.dateBirthDay+"','"+pat.department+"','"+pat.doctorName+"')";
+    console.log(sql);
+    mysqlConnection.query(sql,(err, rows, fields) => {
+        if (!err)
+                res.send('Inserted patient : '+pat.firstName);
+        else
+            console.log(err);
+    })
+});
 
 
+
+//update records for patient
+app.put('/patients/:id/records', (req, res) => {
+    let pati = req.body;
+    var sql = "UPDATE patients SET recordPatient = '"+pati.recordPatient+"' WHERE idpatients = ?"
+    console.log(sql);
+    mysqlConnection.query(sql,[req.params.id], (err, rows, fields) => {
+        if (!err)
+            res.send('Record successfully inserted');
+        else
+            console.log(err);
+    })
+});
+
+//Update an patients
+app.put('/patients/:id', (req, res) => {
+    let upat = req.body;
+    var sql = "UPDATE patients SET firstName = '"+upat.firstName+"', lastName = '"+upat.lastName+"', phoneNumber = "+upat.phoneNumber+", address = '"+upat.address+"', dateBirthDay = '"+upat.dateBirthDay+"', department = '"+upat.department+"', doctorName = '"+upat.doctorName+"' WHERE idpatients = ?"
+    console.log(sql);
+    mysqlConnection.query(sql,[req.params.id], (err, rows, fields) => {
+        if (!err)
+            res.send('Updated patient successfully');
+        else
+            console.log(err);
+    })
+});
